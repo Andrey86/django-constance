@@ -11,9 +11,10 @@ class Config(object):
 
     def __getattr__(self, key):
         try:
-            default, help_text = settings.CONFIG[key]
+            config_options = settings.CONFIG[key]
         except KeyError:
             raise AttributeError(key)
+        default = config_options[0]
         result = self._backend.get(key)
         if result is None:
             result = default

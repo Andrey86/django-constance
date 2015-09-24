@@ -50,6 +50,19 @@ Here, ``42`` is the default value for the key ``THE_ANSWER`` if it is
 not found in the backend. The other member of the tuple is a help text the
 admin will show.
 
+.. code-block:: python
+
+    MAGIC_CHOICES = (
+        ('fire', _('Fire')),
+        ('ice', _('Ice')),
+    )
+
+    CONSTANCE_CONFIG = {
+        'MAGIC_TYPE': ('fire', 'The best type of magic', MAGIC_CHOICES),
+    }
+
+Choices are also supported. You can provide standard django choices tuple as the third member.
+
 See the :ref:`Backends <backends>` section how to setup the backend and
 finish the configuration.
 

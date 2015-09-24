@@ -65,17 +65,22 @@ class ConstanceForm(forms.Form):
         super(ConstanceForm, self).__init__(*args, initial=initial, **kwargs)
         version_hash = hashlib.md5()
 
-        for name, (default, help_text) in settings.CONFIG.items():
-            config_type = type(default)
-            if config_type not in FIELDS:
-                raise ImproperlyConfigured(_("Constance doesn't support "
-                                             "config values of the type "
-                                             "%(config_type)s. Please fix "
-                                             "the value of '%(name)s'.")
-                                           % {'config_type': config_type,
-                                              'name': name})
-            field_class, kwargs = FIELDS[config_type]
-            self.fields[name] = field_class(label=name, **kwargs)
+        for name, config_options in settings.CONFIG.items():
+            if len(config_options) == 3:
+                default, help_text, choices = config_options
+                self.fields[name] = fields.ChoiceField(choices)
+            else:
+                default, help_text = config_options
+                config_type = type(default)
+                if config_type not in FIELDS:
+                    raise ImproperlyConfigured(_("Constance doesn't support "
+                                                 "config values of the type "
+                                                 "%(config_type)s. Please fix "
+                                                 "the value of '%(name)s'.")
+                                               % {'config_type': config_type,
+                                                  'name': name})
+                field_class, kwargs = FIELDS[config_type]
+                self.fields[name] = field_class(label=name, **kwargs)
 
             version_hash.update(smart_bytes(initial.get(name, '')))
         self.initial['version'] = version_hash.hexdigest()
@@ -111,8 +116,8 @@ class ConstanceAdmin(admin.ModelAdmin):
         # First load a mapping between config name and default value
         if not self.has_change_permission(request, None):
             raise PermissionDenied
-        default_initial = ((name, default)
-            for name, (default, help_text) in settings.CONFIG.items())
+        default_initial = ((name, config_options[0])
+            for name, config_options in settings.CONFIG.items())
         # Then update the mapping with actually values from the backend
         initial = dict(default_initial,
             **dict(config._backend.mget(settings.CONFIG.keys())))
@@ -136,7 +141,8 @@ class ConstanceAdmin(admin.ModelAdmin):
             'form': form,
             'media': self.media + form.media,
         }
-        for name, (default, help_text) in settings.CONFIG.items():
+        for name, config_options in settings.CONFIG.items():
+            default, help_text = config_options[:2]
             # First try to load the value from the actual backend
             value = initial.get(name)
             # Then if the returned value is None, get the default
